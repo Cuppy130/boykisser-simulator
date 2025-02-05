@@ -2,6 +2,9 @@ package main;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello, World!");
+        Window window = new Window(800, 600, "Boykisser Simulator");
+        window.setIcon("/res/boykisser.png");
+        window.loop();
+        window.exit();
     }
 }
