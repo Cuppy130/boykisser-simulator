@@ -90,7 +90,7 @@ function love.draw()
     else
         love.graphics.setColor(0, 0, 0)
     end
-    love.graphics.print("https://github.com/Cuppy130/boykisser-simulator", 10, love.graphics.getHeight() - 20) -- we will make this clickable in update
+    love.graphics.print("Github", 10, love.graphics.getHeight() - 20) -- we will make this clickable in update
 end
 
 
