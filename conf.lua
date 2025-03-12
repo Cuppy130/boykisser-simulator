@@ -8,4 +8,10 @@ function love.conf(t)
     t.window.vsync = 1
     t.window.msaa = 0
     t.window.display = 1
+
+    -- this is for the gamesave system
+    t.identity = "boykisser-sim"
+    t.version = "11.3"
+    t.console = false
+    t.accelerometerjoystick = false
 end
