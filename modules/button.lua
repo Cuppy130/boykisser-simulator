@@ -12,6 +12,7 @@ function Button.new(text, x, y, width, height, onClick)
     self.hovered = false
     self.clicked = false
     self.enabled = true
+    
 
 
     function self.draw()

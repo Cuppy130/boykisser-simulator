@@ -1,159 +1,94 @@
 File = {}
 
--- File: file.lua
-function File.new(name)
+function File.new(path)
     local self = {}
-    self.name = name
-    self.index = 0
-    self.data = {}
-    self.open = false
-    self.write = false
-    
-    function self.open(mode)
+    self.path = path
+    self.index = 1
 
-        if mode == "r" then
-            self.file = love.filesystem.newFile(self.name)
-            self.file:open("r")
-            self.index = 0
-            self.data = {}
-            self.open = true
-            self.write = false
-        elseif mode == "w" then
-            self.file = love.filesystem.newFile(self.name)
-            self.file:open("w")
-            self.index = 0
-            self.data = {}
-            self.open = true
-            self.write = true
-        else
-            error("Invalid mode: " .. mode)
-        end
+    self.data = love.filesystem.read(path)
+
+    function self.clear()
+        self.data = ""
     end
-
-    function self.close()
-        if self.open then
-            self.file:close()
-            self.open = false
-            self.write = false
-            self.index = 0
-            self.data = {}
-        else 
-            error("File not open")
-        end
+    
+    if self.data == nil then
+        self.data = ""
     end
 
     function self.writeUInt8(value)
-        if(value < 0 or value > 255) then
+        if value < 0 and value > 255 then
             error("Value out of range for UInt8: " .. value)
         end
-        if self.open then
-            self.file:write(string.char(value))
-            self.index = self.index + 1
-        else
-            error("File not open for writing")
-        end
+
+        self.data = self.data .. string.char(value)
     end
 
     function self.writeUInt16(value)
-        if(value < 0 or value > 65535) then
+        if value < 0 and value > 65535 then
             error("Value out of range for UInt16: " .. value)
         end
-        if self.open then
-            self.file:write(string.char(value % 256, math.floor(value / 256)))
-            self.index = self.index + 2
-        else
-            error("File not open for writing")
-        end
-    end
 
+        self.data = self.data .. string.char(value % 256, math.floor(value / 256))
+    end
     function self.writeUInt32(value)
-        if(value < 0 or value > 4294967295) then
+        if value < 0 and value > 4294967295 then
             error("Value out of range for UInt32: " .. value)
         end
-        if self.open then
-            self.file:write(string.char(value % 256, math.floor(value / 256) % 256, math.floor(value / 65536) % 256, math.floor(value / 16777216)))
-            self.index = self.index + 4
-        else
-            error("File not open for writing")
-        end
-    end
 
+        self.data = self.data .. string.char(value % 256, math.floor(value / 256) % 256, math.floor(value / 65536) % 256, math.floor(value / 16777216))
+    end
     function self.writeString(value)
-        if self.open then
-            local length = #value
-            if length > 255 then
-                error("String too long: " .. value)
-            end
-            self.file:write(string.char(length))
-            self.file:write(value)
-            self.index = self.index + length + 1
-        else
-            error("File not open for writing")
+        local len = #value
+        self.writeUInt8(len)
+        for i = 1, len do
+            self.data = self.data .. string.char(value:byte(i))
         end
     end
 
     function self.readUInt8()
-        if self.open then
-            local byte = self.file:read(1)
-            if byte then
-                self.index = self.index + 1
-                return string.byte(byte)
-            else
-                error("End of file reached")
-            end
-        else
-            error("File not open for reading")
-        end
+        local value = string.byte(self.data, self.index)
+        self.index = self.index + 1
+        return value
     end
-
     function self.readUInt16()
-        if self.open then
-            local bytes = self.file:read(2)
-            if bytes then
-                self.index = self.index + 2
-                return string.byte(bytes, 1) + string.byte(bytes, 2) * 256
-            else
-                error("End of file reached")
-            end
-        else
-            error("File not open for reading")
-        end
+        local value = string.byte(self.data, self.index) + string.byte(self.data, self.index + 1) * 256
+        self.index = self.index + 2
+        return value
     end
-
     function self.readUInt32()
-        if self.open then
-            local bytes = self.file:read(4)
-            if bytes then
-                self.index = self.index + 4
-                return string.byte(bytes, 1) + string.byte(bytes, 2) * 256 + string.byte(bytes, 3) * 65536 + string.byte(bytes, 4) * 16777216
-            else
-                error("End of file reached")
-            end
-        else
-            error("File not open for reading")
-        end
+        local value = string.byte(self.data, self.index) + string.byte(self.data, self.index + 1) * 256 + string.byte(self.data, self.index + 2) * 65536 + string.byte(self.data, self.index + 3) * 16777216
+        self.index = self.index + 4
+        return value
     end
-
     function self.readString()
-        if self.open then
-            local length = self.file:read(1)
-            if length then
-                length = string.byte(length)
-                local str = self.file:read(length)
-                if str then
-                    self.index = self.index + length + 1
-                    return str
-                else
-                    error("End of file reached")
-                end
-            else
-                error("End of file reached")
-            end
-        else
-            error("File not open for reading")
+        local len = string.byte(self.data, self.index)
+        self.index = self.index + 1
+        local value = ""
+        for i = 1, len do
+            value = value .. string.char(string.byte(self.data, self.index))
+            self.index = self.index + 1
         end
+        return value
+    end
+    function self.write()
+        love.filesystem.write(self.path, self.data)
+    end
+    function self.read()
+        self.data = love.filesystem.read(self.path)
+        if self.data == nil then
+            self.data = ""
+        end
+        self.index = 1
     end
 
     return self
-
 end
+local f = File.new("save1.txt")
+f.clear()
+f.writeString("Boykisser")
+f.writeUInt32(18)
+f.writeUInt8(100)
+f.writeUInt8(100)
+
+f.write();
+print(f.data)
