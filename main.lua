@@ -258,24 +258,29 @@ local title = {
     y = 100
 }
 
+local tribar = Image.new("assets/sprites/tribar.png", love.graphics.getWidth() - 40+2.5, 12.5, 25, 25)
+
 function love.draw()
     if buttons[screens.current] == nil then
         love.graphics.setColor(1, 1, 1)
         love.graphics.print("Screen " .. screens.current .. " does not exist", 10, 10)
         return
     end
+
     
     love.graphics.setShader(boykisser)
     love.graphics.draw(boykisserTexture, 0, 0, 0, 1.25, 1)
     love.graphics.setShader()
 
-    -- drawing the elements
     for _, button in ipairs(buttons[screens.current].buttons) do
         button.draw()
     end
 
+
     if screens.current == 'screen_mainMenu' then
         love.graphics.draw(title.image, title.x, title.y, 0, 1, 1, title.image:getWidth() / 2, title.image:getHeight() / 2)
+    elseif screens.current == 'screen_gameplay' then
+        tribar.draw()
     end
 
     SCREENMAN.draw()
