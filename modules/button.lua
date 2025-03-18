@@ -26,7 +26,10 @@ function Button.new(text, x, y, width, height, onClick)
         love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
         love.graphics.setColor(0, 0, 0)
         love.graphics.rectangle("line", self.x, self.y, self.width, self.height)
-        love.graphics.print(self.text, self.x + 10, self.y + 10)
+        local font = love.graphics.getFont()
+        local textWidth = font:getWidth(self.text)
+        local textHeight = font:getHeight()
+        love.graphics.print(self.text, self.x + (self.width - textWidth) / 2, self.y + (self.height - textHeight) / 2)
     end
 
     function self.update()

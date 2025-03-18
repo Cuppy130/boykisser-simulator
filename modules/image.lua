@@ -15,4 +15,8 @@ function Image.new(path, x, y, width, height)
     function self.draw()
         love.graphics.draw(self.image, self.x, self.y, 0, self.scaleX, self.scaleY)
     end
+
+    function self.update()
+        -- Update logic if needed
+    end
 end

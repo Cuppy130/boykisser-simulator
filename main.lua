@@ -2,11 +2,10 @@ require("modules.button")
 require("modules.hyperlink")
 require("modules.file")
 require("modules.image")
+require("global")
 
 click_sound = love.audio.newSource("assets/click.mp3", "static")
 click_sound:setVolume(0.5)
-
-local menuButtons
 
 local github = Hyperlink.new("Github", 10, love.graphics.getHeight() - 20, "https://github.com/Cuppy130/boykisser-simulator")
 
@@ -37,6 +36,12 @@ local function saveGame(slot)
                     energy = 100,
                     lovePoints = 0,
                     money = 100
+                },
+                inventory = {
+                    items = {},
+                    food = {},
+                    toys = {},
+                    medicine = {},
                 }
             }
         }
@@ -53,29 +58,52 @@ local function saveGame(slot)
     local money = data.data.pet.money
     
     local file = File.new("save" .. slot .. ".txt")
+    file.clear()
     file.writeString(saveName)
     file.writeUInt32(petAge)
     file.writeUInt8(petHunger)
     file.writeUInt8(petHappiness)
     file.writeUInt8(petHealth)
     file.writeUInt8(petEnergy)
-    file.writeUInt16(lovePoints)
-    file.writeUInt16(money)
+    file.writeUInt32(lovePoints)
+    file.writeUInt32(money)
+    file.write()
+    file = nil
+    saveData[slot] = {
+        name = saveName,
+        data = {
+            pet = {
+                name = petName,
+                age = petAge,
+                hunger = petHunger,
+                happiness = petHappiness,
+                health = petHealth,
+                energy = petEnergy,
+                lovePoints = lovePoints,
+                money = money
+            }
+        }
+    }
+    SCREENMAN:log("Saved game " .. slot .. " to " .. love.filesystem.getSaveDirectory() .. "/save" .. slot .. ".txt")
 end
 
 
 local function loadGame(slot)
     local file = File.new("save" .. slot .. ".txt")
+    if not file.exists() then
+        SCREENMAN:log("Save " .. slot .. " does not exist")
+        return
+    end
+    file.read()
     local saveName = file.readString()
     local petAge = file.readUInt32()
     local petHunger = file.readUInt8()
     local petHappiness = file.readUInt8()
     local petHealth = file.readUInt8()
     local petEnergy = file.readUInt8()
-    local lovePoints = file.readUInt16()
-    local money = file.readUInt16()
-    local petName = file.readString()
-
+    local lovePoints = file.readUInt32()
+    local money = file.readUInt32()
+    
     saveData[slot] = {
         name = saveName,
         data = {
@@ -91,20 +119,22 @@ local function loadGame(slot)
             }
         }
     }
+    file = nil
+    SCREENMAN:log("Loaded game " .. slot .. " from " .. love.filesystem.getSaveDirectory() .. "/save" .. slot .. ".txt")
 end
 
 local buttons = {
     screen_mainMenu = {
         buttons = {
-            Button.new("Start", 10, 40, 100, 50, function()
+            Button.new("Start", love.graphics.getWidth() / 2 - 100, love.graphics.getHeight() / 2 - 25, 200, 50, function()
                 click_sound:play()
                 screens.current = 'screen_game'
             end),
-            Button.new("Options", 10, 100, 100, 50, function()
+            Button.new("Options", love.graphics.getWidth() / 2 - 100, love.graphics.getHeight() / 2 + 50, 200, 50, function()
                 click_sound:play()
                 screens.current = 'screen_options'
             end),
-            Button.new("Exit", 10, 160, 100, 50, function()
+            Button.new("Exit", love.graphics.getWidth() / 2 - 100, love.graphics.getHeight() / 2 + 125, 200, 50, function()
                 love.event.quit()
             end)
         }
@@ -167,6 +197,11 @@ local boykisser = love.graphics.newShader [[
     vec4 effect(vec4 color, Image img, vec2 texture_coords, vec2 pixel_coords){
         vec2 tex = texture_coords;
         tex *= 10.0;
+
+        //pixelate
+        tex.x = floor(tex.x * 32.0) / 32.0; 
+        tex.y = floor(tex.y * 32.0) / 32.0;
+
         tex.x += time;
         tex.y += sin(time) * 2;
         vec4 pixel = Texel(img, tex);
@@ -211,10 +246,17 @@ function love.load()
                 love.filesystem.remove("save" .. selectedSave .. ".txt")
                 reloadSaveDirectory()
                 screens.current = 'screen_mainMenu'
-            end),
+                SCREENMAN:log("Deleted save " .. selectedSave .. " from " .. love.filesystem.getSaveDirectory() .. "/save" .. selectedSave .. ".txt")
+            end)
         }
     }
 end
+
+local title = {
+    image = love.graphics.newImage("assets/sprites/title.png"),
+    x = love.graphics.getWidth() / 2,
+    y = 100
+}
 
 function love.draw()
     if buttons[screens.current] == nil then
@@ -232,22 +274,11 @@ function love.draw()
         button.draw()
     end
 
-    if buttons[screens.current].images then
-        for _, image in ipairs(buttons[screens.current].images) do
-            image.draw()
-        end
+    if screens.current == 'screen_mainMenu' then
+        love.graphics.draw(title.image, title.x, title.y, 0, 1, 1, title.image:getWidth() / 2, title.image:getHeight() / 2)
     end
 
-    -- love.graphics.setColor(0, 0, 0)
-    -- love.graphics.print("Boykisser simulator v1.0.0", 10, 10)
-
-    -- if linkHovered then
-    --     love.graphics.setColor(0, 0, 1)
-    -- else
-    --     love.graphics.setColor(0, 0, 0)
-    -- end
-    -- love.graphics.print("Github", 10, love.graphics.getHeight() - 20) -- we will make this clickable in update
-    
+    SCREENMAN.draw()
     github.draw()
 end
 
@@ -260,25 +291,11 @@ function love.update(dt)
 
     boykisser:send("time", love.timer.getTime())
 
-    -- make the link clickable
-    -- local mx, my = love.mouse.getPosition()
-    -- if mx >= 10 and mx <= 10 + love.graphics.getFont():getWidth("Github") and my >= love.graphics.getHeight() - 20 and my <= love.graphics.getHeight() then
-    --     linkHovered = true
-    -- else
-    --     linkHovered = false
-    --     linkClicked = false
-    -- end
-
-    -- if linkHovered and love.mouse.isDown(1) and not linkClicked then
-    --     linkClicked = true
-    --     love.system.openURL("https://github.com/Cuppy130/boykisser-simulator")
-    -- elseif not love.mouse.isDown(1) then
-    --     linkClicked = false
-    -- end
-
     for _, button in ipairs(buttons[screens.current].buttons) do
         button.update()
     end
+
+    SCREENMAN.update()
 
     github.update()
 end
